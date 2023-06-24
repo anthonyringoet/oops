@@ -1,16 +1,34 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"io"
 	"io/ioutil"
 	"os"
 	"testing"
 )
+
+// ComputeHash computes the SHA-256 hash of a file.
+func ComputeHash(filename string) ([]byte, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return nil, err
+	}
+
+	return hash.Sum(nil), nil
+}
 
 func TestGenerateKeyPair(t *testing.T) {
 	err := GenerateKeyPair(2048)
@@ -169,5 +187,97 @@ func TestLoadPublicKeyFail(t *testing.T) {
 	_, err := LoadPublicKey(nonExistingPath)
 	if err == nil {
 		t.Errorf("Expected an error when loading non-existent public key, got nil")
+	}
+}
+
+// func TestFileEncryption(t *testing.T) {
+// 	tempFile, err := ioutil.TempFile("", "testfile")
+// 	if err != nil {
+// 		t.Fatalf("Failed to create temp file: %v", err)
+// 	}
+
+// 	_, err = tempFile.Write([]byte("Hello, world!"))
+// 	if err != nil {
+// 		t.Fatalf("Failed to write to temp file: %v", err)
+// 	}
+
+// 	err = GenerateKeyPair(2048)
+// 	if err != nil {
+// 		t.Fatalf("Failed to generate key pair: %v", err)
+// 	}
+
+// 	originalHash, err := ComputeHash(tempFile.Name())
+// 	if err != nil {
+// 		t.Fatalf("Failed to compute hash of original file: %v", err)
+// 	}
+
+// 	publicKey, err := LoadPublicKey(PublicKeyPath)
+
+// 	err = EncryptFile(tempFile.Name(), publicKey)
+// 	if err != nil {
+// 		t.Fatalf("Failed to encrypt file: %v", err)
+// 	}
+
+// 	encryptedHash, err := ComputeHash(tempFile.Name() + ".oops")
+// 	if err != nil {
+// 		t.Fatalf("Failed to compute hash of encrypted file: %v", err)
+// 	}
+
+// 	if bytes.Equal(originalHash, encryptedHash) {
+// 		t.Errorf("Hash of original file matches hash of encrypted file")
+// 	}
+// }
+
+func TestFileEncryption(t *testing.T) {
+	tempFile, err := ioutil.TempFile("", "testfile")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+
+	_, err = tempFile.Write([]byte("Hello, world!"))
+	if err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+
+	err = GenerateKeyPair(2048)
+	if err != nil {
+		t.Fatalf("Failed to generate key pair: %v", err)
+	}
+
+	originalHash, err := ComputeHash(tempFile.Name())
+	if err != nil {
+		t.Fatalf("Failed to compute hash of original file: %v", err)
+	}
+
+	privateKey, err := LoadPrivateKey(PrivateKeyPath)
+	publicKey, err := LoadPublicKey(PublicKeyPath)
+
+	err = EncryptFile(tempFile.Name(), publicKey)
+	if err != nil {
+		t.Fatalf("Failed to encrypt file: %v", err)
+	}
+
+	encryptedHash, err := ComputeHash(tempFile.Name() + ".oops")
+	if err != nil {
+		t.Fatalf("Failed to compute hash of encrypted file: %v", err)
+	}
+
+	if bytes.Equal(originalHash, encryptedHash) {
+		t.Errorf("Hash of original file matches hash of encrypted file")
+	}
+
+	err = DecryptFile(tempFile.Name()+".oops", privateKey)
+	if err != nil {
+		t.Fatalf("Failed to decrypt file: %v", err)
+	}
+
+	// again from just tempfile name because file should be set back to original
+	decryptedHash, err := ComputeHash(tempFile.Name())
+	if err != nil {
+		t.Fatalf("Failed to compute hash of decrypted file: %v", err)
+	}
+
+	if !bytes.Equal(originalHash, decryptedHash) {
+		t.Errorf("Hash of original file does not match hash of decrypted file")
 	}
 }

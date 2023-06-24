@@ -2,23 +2,23 @@
 
 > A toy implementation of a (fake) ransomware-style program
 
-## features
+If you're looking for some kind of evil piece of software, i'll have to dissappoint you.
+It's really not actual ransomware. Not by far.
 
-Here is a high-level list of steps that the toy ransomware-style encrypting program could perform on startup:
-
-- **Setup**: Initialize necessary variables, configuration settings, and load any required packages or modules.
-- **Key Pair Generation**: Generate a public/private key pair using a cryptographic library. This will be used for the encryption and decryption of files.
-- **Report Status**: Notify that the program has started and the key pair has been generated successfully. This could be a simple print statement to stdout.
-- **Directory Selection**: Specify the directory that will be the target for encryption. Make sure this is a safe directory that doesn't contain any important files.
-- **Recursive File Search**: Traverse the specified directory and its subdirectories to find all files. Store these filenames in a list or similar data structure for later use.
-- **Encrypt Files**: Iterate through the list of filenames, encrypting each one using the public key. Each successful encryption should remove the original file.
-- **Encryption Report**: After all files have been encrypted, report the status of the operation. This could include the number of files encrypted, any errors encountered, etc.
-- **Start** Decryption Listener: Start a function that constantly checks for a signal to decrypt the files. This could be the presence of a specific file in the directory.
+The file selection is currently hardcoded to select all files in a directory named `target` in the current working directory.
 
 ## Run
 
 ```bash
-# TBC
+go run main.go -mode=encrypt -dryrun
+go run main.go -mode=decrypt -dryrun
+
+# help
+go run main.go -h
+-dryrun
+      Set to true for dry run.
+-mode string
+      Set mode to either 'encrypt' or 'decrypt'. (default "encrypt")
 ```
 
 ## Build
@@ -40,15 +40,35 @@ go test -run TestGenerateKeyPair
 go test -run TestGenerate.*
 ```
 
-## CLI
+## Manual test
 
 ```bash
-  -dryrun
-        Set to true for dry run.
-  -mode string
-        Set mode to either 'encrypt' or 'decrypt'. (default "encrypt")
+./seed.sh
+go run main.go
 
-# examples
-go run main.go -mode=encrypt -dryrun
-go run main.go -mode=decrypt -dryrun
+# output below
+Starting oops...
+Generating keypair
+Keys already exist, continuing...
+Getting file list
+Total files: 70
+⏳⏳⏳ START Processing mode=encrypt dryRun=false
+
+⏳ Processing file=/Users/someone/oops/target/dir1/file7.txt
+⏳ Processing file=/Users/someone/oops/target/dir2/file7.txt
+⏳ Processing file=/Users/someone/oops/target/dir2/file8.txt
+⏳ Processing file=/Users/someone/oops/target/dir1/file3.txt
+🔐 Encrypting file=/Users/someone/oops/target/dir2/file8.txt
+🔐 Encrypting file=/Users/someone/oops/target/dir1/file3.txt
+✅ Processed /Users/someone/oops/target/dir2/file8.txt in 1.174709ms
+⏳ Processing file=/Users/someone/oops/target/dir4/file9.txt
+🔐 Encrypting file=/Users/someone/oops/target/dir4/file9.txt
+✅ Processed /Users/someone/oops/target/dir4/file8.txt in 985.5µs
+...
+Processed all files in 9.099709ms
+Processed 70 of 70 files. Failed: 0
+
+
+# afterwards to decrypt
+go run main.go -mode=decrypt
 ```

